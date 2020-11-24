@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>规则引擎测试</title>
+    <style>
+        .head {
+            width: 100%;
+            display: flex;
+            margin-top: 20px;
+        }
+
+        .form {
+            display: flex;
+            margin-right: 20px;
+        }
+
+        .item {
+            margin-right: 20px;
+        }
+
+    </style>
+    <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+</head>
+<body>
+<div class="head">
+    <form class="form" id="dataForm">
+        <label for="rule">规则: </label>
+        <textarea name="rule" rows="10" cols="30" id="rule" class="item"></textarea>
+        <br/>
+        <label for="params">参数: </label>
+        <textarea name="params" rows="10" cols="30" id="params" placeholder="格式:k1=v1;k2=v2;kn=vn..."
+                  class="item"></textarea>
+        <br/>
+        <label for="result">结果: </label>
+        <textarea name="result" rows="10" cols="30" id="result" class="item"></textarea>
+        <br/>
+    </form>
+    <button type="button" onclick="submit()">校验</button>
+</div>
+</body>
+<script type="application/javascript">
+    function submit() {
+        var data = $("#dataForm").serialize();
+        $.post("/exec", data, function (res) {
+            if (res.status != 200) {
+                alert(res.message);
+            } else {
+                $("#result").val(res.data);
+            }
+        });
+    }
+</script>
+</html>

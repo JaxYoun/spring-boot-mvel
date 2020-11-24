@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="http://www.layuicdn.com/layui/css/layui.css"/>
+    <script src="http://www.layuicdn.com/layui/layui.js"></script>
+    <title>MVEL2-规则引擎</title>
+    <style>
+        .footer {
+            bottom: 0;
+            cursor: default;
+            height: 6em;
+            left: 0;
+            line-height: 8em;
+            position: fixed;
+            text-align: center;
+            width: 100%;
+            z-index: -10000;
+        }
+    </style>
+    <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+    <script src="http://cdn.bootcdn.net/ajax/libs/layer/1.8.5/layer.min.js"></script>
+</head>
+<body>
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+    <legend>规则校验</legend>
+</fieldset>
+<form class="layui-form" id="dataForm">
+    <div class="layui-form-item">
+        <label class="layui-form-label">规则:</label>
+        <div class="layui-input-block">
+            <textarea name="rule" id="rule" rows="5" cols="30" placeholder="请输入规则" class="layui-textarea"></textarea>
+        </div>
+    </div>
+
+    <div id="paramDiv">
+        <div class="layui-form-item">
+            <div class="layui-inline">
+                <label class="layui-form-label">参数:</label>
+                <div class="layui-input-inline" style="width: 200px;">
+                    <input type="text" name="fieldName" lay-verify="required" lay-reqtext="参数名必填" placeholder="key" autocomplete="off" class="layui-input">
+                </div>
+                <div class="layui-form-mid">:</div>
+                <div class="layui-input-inline" style="width: 200px;">
+                    <input type="text" name="fieldValue" placeholder="value" autocomplete="off" class="layui-input">
+                </div>
+                <div class="layui-input-inline" style="width: 100px;">
+                    <button type="button" class="layui-btn" onclick="addParam()">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">结果:</label>
+        <div class="layui-input-block">
+            <textarea name="result" id="result" rows="5" cols="30" disabled="disabled" placeholder="等待执行"
+                      class="layui-textarea"></textarea>
+        </div>
+    </div>
+</form>
+<div class="layui-form-item">
+    <div class="layui-input-block">
+        <button type="button" class="layui-btn" onclick="submit()">校验</button>
+        <button type="button" class="layui-btn layui-btn-danger" onclick="clearForm()">清空规则</button>
+        <button type="button" class="layui-btn layui-btn-danger" onclick="clearHis()">清空历史</button>
+    </div>
+</div>
+
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+    <legend>执行历史</legend>
+</fieldset>
+<div id="history">
+</div>
+<footer class="footer">
+    <span class="copyright">© 2020 T^T <a href="https://beian.miit.gov.cn" target="_blank">京ICP备030173号</a></span>
+</footer>
+</body>
+<script type="application/javascript">
+
+</script>
+<script type="application/javascript">
+        var hisTemp = "<blockquote class=\"layui-elem-quote layui-quote-nm\">\n" +
+            "        时间: @{time}\n" +
+            "        规则: @{rule}\n" +
+            "        参数: @{params}\n" +
+            "        结果: @{result}\n" +
+            "    </blockquote>";
+
+        var paramTemp = "<div class=\"layui-form-item\">\n" +
+            "            <div class=\"layui-inline\">\n" +
+            "                <label class=\"layui-form-label\">参数:</label>\n" +
+            "                <div class=\"layui-input-inline\" style=\"width: 200px;\">\n" +
+            "                    <input type=\"text\" name=\"fieldName\" lay-verify=\"required\" lay-reqtext=\"参数名必填\" placeholder=\"key\" autocomplete=\"off\" class=\"layui-input\">\n" +
+            "                </div>\n" +
+            "                <div class=\"layui-form-mid\">:</div>\n" +
+            "                <div class=\"layui-input-inline\" style=\"width: 200px;\">\n" +
+            "                    <input type=\"text\" name=\"fieldValue\" placeholder=\"value\" autocomplete=\"off\" class=\"layui-input\">\n" +
+            "                </div>\n" +
+            "                <div class=\"layui-input-inline\" style=\"width: 100px;\">\n" +
+            "                    <button type=\"button\" class=\"layui-btn\" onclick=\"delParam(this)\">-</button>\n" +
+            "                </div>\n" +
+            "            </div>\n" +
+            "        </div>";
+
+        function submit() {
+            var obj = {};
+            var prams=[];
+            var rule = $("#rule").val();
+            var paramForms = $("#paramDiv").find('.layui-form-item');
+            if(paramForms.length!==0){
+                $.each(paramForms,function (index, ele) {
+                    var inputs =  $(ele).find('input[type="text"]');
+                    var param = {};
+                    $.each(inputs,function (i, e) {
+                        var keyName = $(e).attr('name');
+                        var valName = $(e).val();
+                        if(keyName==='fieldName'){
+                            param[keyName]=valName;
+                        }else{
+                            param[keyName]=stringToNumber(valName);
+                        }
+                    });
+
+                    prams.push(param);
+                })
+            }
+
+            obj['rule']=rule;
+            obj['params']=prams;
+
+            console.log(JSON.stringify(obj));
+
+            $.ajax({
+                type: "POST",
+                url: "/exec",
+                async: true,
+                contentType: 'application/json',
+                dataType: 'JSON',
+                data: JSON.stringify(obj),//将对象转为json字符串
+                success: function(res) {
+                    if (res.status !== 200) {
+                        console.log(res.message);
+                        layer.alert(res.message);
+                    } else {
+                        $("#result").val(res.data.result);
+                        addHistory(res.data);
+                    }
+                }
+            });
+        }
+
+        function stringToNumber(value) {
+            if(checkNumber(value)){
+               return Number(value);
+            }
+            return value;
+        }
+
+        //验证字符串是否是数字
+        function checkNumber(theObj) {
+            var reg = /^\d+(\.\d+)?$/;
+            return reg.test(theObj);
+
+        }
+
+        function clearForm() {
+            $("#rule").val("");
+            $("#result").val("");
+            clearParam($("#paramDiv").find(".layui-form-item"));
+        }
+
+        function clearParam(itemArr) {
+            for (var i = 0; i < itemArr.length; i++) {
+                if(i===0){
+                    clearParamOne(itemArr[i]);
+                }else{
+                    $(itemArr[i]).remove();
+                }
+            }
+        }
+
+        function clearParamOne(dom) {
+           var inputArr = $(dom).find("input[type='text']");
+            for (var i = 0; i < inputArr.length; i++) {
+                $(inputArr[i]).val("");
+            }
+        }
+
+        function clearHis() {
+            $("#history").empty();
+        }
+
+        function addHistory(data) {
+            var thisUse = hisTemp;
+            thisUse = thisUse.replace("@{rule}", $("#rule").val());
+            thisUse = thisUse.replace("@{params}", data.param.length === 0 ? "无" : data.param);
+            thisUse = thisUse.replace("@{result}", data.result);
+            thisUse = thisUse.replace("@{time}", getFormatDate);
+            $("#history").prepend(thisUse);
+        }
+
+
+        function getFormatDate() {
+            var nowDate = new Date();
+            var year = nowDate.getFullYear();
+            var month = nowDate.getMonth() + 1 < 10 ? "0" + (nowDate.getMonth() + 1) : nowDate.getMonth() + 1;
+            var date = nowDate.getDate() < 10 ? "0" + nowDate.getDate() : nowDate.getDate();
+            var hour = nowDate.getHours() < 10 ? "0" + nowDate.getHours() : nowDate.getHours();
+            var minute = nowDate.getMinutes() < 10 ? "0" + nowDate.getMinutes() : nowDate.getMinutes();
+            var second = nowDate.getSeconds() < 10 ? "0" + nowDate.getSeconds() : nowDate.getSeconds();
+            return year + "-" + month + "-" + date + " " + hour + ":" + minute + ":" + second;
+        }
+
+        function addParam() {
+            $("#paramDiv").append(paramTemp);
+        }
+
+        function delParam(obj) {
+            var parent = $(obj).parents(".layui-form-item");
+            $(parent).remove();
+        }
+</script>
+</html>

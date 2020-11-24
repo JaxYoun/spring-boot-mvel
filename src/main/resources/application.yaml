@@ -1,0 +1,6 @@
+server:
+  port: 9973
+
+spring:
+  freemarker:
+    suffix: .html
